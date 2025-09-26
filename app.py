@@ -93,34 +93,47 @@ def process_dataframe(df, multiples):
     controle_df = df[df['Status'] == 'abaixo_do_mínimo'].copy()
     missing_df = df[df['Status'] == 'Este_item_não_existe_na_planilha_de_múltiplo_atualize'].copy()
     controle_df = pd.concat([controle_df, missing_df], ignore_index=True)
+
+    # Excluir colunas indesejadas
+    unwanted_cols = ["Custo total", "Unnamed: 15", "Quantidade aceita", "Quantidade de ASN", "Quantidade recebida", "Quantidade pendente", "SKU", "AdjustedQty"]
+    for df_out in [pedido_df, controle_df]:
+        df_out.drop(columns=[col for col in unwanted_cols if col in df_out.columns], inplace=True, errors='ignore')
+
+    # Renomear colunas
+    for df_out in [pedido_df, controle_df]:
+        if 'QTY' in df_out.columns:
+            df_out.rename(columns={'QTY': 'Quantidade solicitada pela Amazon'}, inplace=True)
+        if 'Quantidade solicitada' in df_out.columns:
+            df_out.rename(columns={'Quantidade solicitada': 'Quantidade Ajustada'}, inplace=True)
+
     return pedido_df, controle_df, sku_col, qty_col
 
 def style_excel(path, status_col_name='Status'):
     wb = load_workbook(path)
-    ws = wb['Pedido']
-    headers = [c.value for c in next(ws.iter_rows(min_row=1, max_row=1))]
-    status_idx = headers.index(status_col_name) + 1
-    qty_idx = None
-    if 'AdjustedQty' in headers:
-        qty_idx = headers.index('AdjustedQty') + 1
-    else:
-        for i, h in enumerate(headers):
-            if h and 'quant' in str(h).lower():
-                qty_idx = i + 1
-                break
-
+    sheets = ['Pedido', 'Removidos']
     fill_adjusted = PatternFill(start_color="FFF59D", end_color="FFF59D", fill_type="solid")  # amarelo
     fill_below = PatternFill(start_color="FFBABA", end_color="FFBABA", fill_type="solid")     # vermelho claro
     fill_missing = PatternFill(start_color="FFD8A8", end_color="FFD8A8", fill_type="solid")   # laranja
 
-    for row in ws.iter_rows(min_row=2, max_row=ws.max_row):
-        status = row[status_idx - 1].value
-        if status == 'ajustado' and qty_idx:
-            row[qty_idx - 1].fill = fill_adjusted
-        elif status == 'abaixo_do_mínimo' and qty_idx:
-            row[qty_idx - 1].fill = fill_below
-        elif status == 'Este_item_não_existe_na_planilha_de_múltiplo_atualize' and qty_idx:
-            row[qty_idx - 1].fill = fill_missing
+    for sheet_name in sheets:
+        if sheet_name in wb.sheetnames:
+            ws = wb[sheet_name]
+            headers = [c.value for c in next(ws.iter_rows(min_row=1, max_row=1))]
+            if status_col_name not in headers:
+                continue
+            status_idx = headers.index(status_col_name) + 1
+
+            for row in ws.iter_rows(min_row=2, max_row=ws.max_row):
+                status = row[status_idx - 1].value
+                if status == 'ajustado':
+                    for cell in row:
+                        cell.fill = fill_adjusted
+                elif status == 'abaixo_do_mínimo':
+                    for cell in row:
+                        cell.fill = fill_below
+                elif status == 'Este_item_não_existe_na_planilha_de_múltiplo_atualize':
+                    for cell in row:
+                        cell.fill = fill_missing
 
     wb.save(path)
 
