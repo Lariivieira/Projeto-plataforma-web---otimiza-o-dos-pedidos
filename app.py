@@ -70,16 +70,16 @@ def process_dataframe(df, multiples):
         qty = int(row['_QTY_'])
         mult = multiples.get(sku)
         if mult is None:
-            statuses.append('missing_multiple')
+            statuses.append('Este_item_não_existe_na_planilha_de_múltiplo_atualize')
             adj_qtys.append(qty)
         else:
             if qty < mult:
-                statuses.append('below_minimum')
+                statuses.append('abaixo_do_mínimo')
                 adj_qtys.append(0)
             else:
                 adj = (qty // mult) * mult
                 if adj != qty:
-                    statuses.append('adjusted')
+                    statuses.append('ajustado')
                     adj_qtys.append(adj)
                 else:
                     statuses.append('ok')
@@ -88,10 +88,10 @@ def process_dataframe(df, multiples):
     df['Status'] = statuses
     df['AdjustedQty'] = adj_qtys
 
-    pedido_df = df[df['Status'] != 'below_minimum'].copy()
+    pedido_df = df[df['Status'] != 'abaixo_do_mínimo'].copy()
     pedido_df[qty_col] = pedido_df['AdjustedQty']
-    controle_df = df[df['Status'] == 'below_minimum'].copy()
-    missing_df = df[df['Status'] == 'missing_multiple'].copy()
+    controle_df = df[df['Status'] == 'abaixo_do_mínimo'].copy()
+    missing_df = df[df['Status'] == 'Este_item_não_existe_na_planilha_de_múltiplo_atualize'].copy()
     controle_df = pd.concat([controle_df, missing_df], ignore_index=True)
     return pedido_df, controle_df, sku_col, qty_col
 
@@ -115,11 +115,11 @@ def style_excel(path, status_col_name='Status'):
 
     for row in ws.iter_rows(min_row=2, max_row=ws.max_row):
         status = row[status_idx - 1].value
-        if status == 'adjusted' and qty_idx:
+        if status == 'ajustado' and qty_idx:
             row[qty_idx - 1].fill = fill_adjusted
-        elif status == 'below_minimum' and qty_idx:
+        elif status == 'abaixo_do_mínimo' and qty_idx:
             row[qty_idx - 1].fill = fill_below
-        elif status == 'missing_multiple' and qty_idx:
+        elif status == 'Este_item_não_existe_na_planilha_de_múltiplo_atualize' and qty_idx:
             row[qty_idx - 1].fill = fill_missing
 
     wb.save(path)
