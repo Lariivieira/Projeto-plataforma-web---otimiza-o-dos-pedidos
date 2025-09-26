@@ -95,7 +95,7 @@ def process_dataframe(df, multiples):
     controle_df = pd.concat([controle_df, missing_df], ignore_index=True)
 
     # Excluir colunas indesejadas
-    unwanted_cols = ["Custo total", "Unnamed: 15", "Quantidade aceita", "Quantidade de ASN", "Quantidade recebida", "Quantidade pendente", "SKU", "AdjustedQty"]
+    unwanted_cols = ["Custo total", "Unnamed: 15", "Quantidade aceita", "Quantidade de ASN", "Quantidade recebida", "Quantidade pendente", "SKU", "AdjustedQty", "_QTY_", "_SKU_"]
     for df_out in [pedido_df, controle_df]:
         df_out.drop(columns=[col for col in unwanted_cols if col in df_out.columns], inplace=True, errors='ignore')
 
